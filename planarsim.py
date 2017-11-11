@@ -111,7 +111,8 @@ def transform_from_sequence(sequ, seqt):
     return resultT
 
 
-def sample_trajectory(sequ, seqt, final_t, n, epsilon=.00001):
+
+def sample_trajectory(sequ, seqt, final_t, n, epsilon=.00001, diff_start_config=None):
     # Compute a list of n + 1 transforms
 
     # n is number of timesteps. number of samples = n + 1, since first
@@ -150,6 +151,13 @@ def sample_trajectory(sequ, seqt, final_t, n, epsilon=.00001):
             t_prev_total += duration  # accumulated time for completed controls
             current_action += 1
 
+    #Edit to include different start_config
+    if diff_start_config!= None:
+        diff_start_transform = transform_from_config(diff_start_config)
+        for frame in T_list:
+            frame = frame @ diff_start_transform
+        
+
     return T_list
 
 
@@ -160,5 +168,5 @@ if __name__ == '__main__':
     T = transform_from_sequence([controls_rs[0]], [.2])
     print(T)
 
-    T_list = sample_trajectory([controls_rs[0], controls_rs[3]], [.2, .2], .4, 10)
-    print(T_list)
+    # T_list = sample_trajectory([controls_rs[0], controls_rs[3]], [.2, .2], .4, 10)
+    # print(T_list)

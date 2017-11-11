@@ -11,7 +11,7 @@ class robot_arm():
 		self.arm_list = arm_list
 		self.angle_list = angle_list
 		self.compeleted_animations = [False for i in range(len(arm_list))]
-		print(self.compeleted_animations)
+		# print(self.compeleted_animations)
 		self.polygon_list = []
 		self.completed_animations = 0
 
@@ -107,7 +107,7 @@ class robot_arm():
 
 			if self.completed_animations == len(self.angle_list[curr_index]):
 				self.completed_animations = 0
-				print("YO WHAT THE")
+				# print("YO WHAT THE")
 				# self.angle_index += 1
 
 

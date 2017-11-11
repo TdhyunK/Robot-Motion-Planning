@@ -379,6 +379,7 @@ class CS1Canvas(QWidget):
         self.ipainter.drawRect(x, y, w, h)
 
     def draw_polygon(self, vertices):
+
         qpoints = []
 
         for vertex in vertices:
@@ -506,10 +507,8 @@ def draw_point(x, y):
 def draw_line(x1, y1, x2, y2):
     canvas.draw_line(x1, y1, x2, y2)
 
-
 def draw_polygon(vertices):
     canvas.draw_polygon(vertices)
-
 
 def draw_triangle(x1, y1, x2, y2, x3, y3):
     draw_polygon([(x1, y1), (x2, y2), (x3, y3)])
@@ -585,7 +584,7 @@ def get_text_height():
 
 # the frames parameters gives the number of frames to display on the
 #  browser version of cs1lib.  Ignored in qt version.
-def start_graphics(draw_func=noop, frames=1, data=None, framerate=2,
+def start_graphics(draw_func=noop, frames=1, data=None, framerate=1,
                 title="cs1", width=400, height=400,
                 mouse_press=noop, mouse_release = noop, mouse_move=noop,
                 key_press=noop, key_release=noop):

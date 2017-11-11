@@ -11,11 +11,15 @@ class TrajectoryView:
         self.scale = scale
 
     def draw(self):
+        print("DRAW")
         ox = None
         oy = None
         for i in range(len(self.sampled_trajectory)):
             frame = self.sampled_trajectory[i]
+            print("frame: " + str(frame))
             x, y, theta = config_from_transform(frame)
+            print("X: " + str(x) + " Y: " + str(y) + " Theta: " + str(theta))
+
 
             px = self.center_x + x * self.scale
             py = self.center_y - y * self.scale
@@ -37,8 +41,10 @@ def display():
 
 if __name__ == '__main__':
 
-    samples = sample_trajectory([controls_rs[0], controls_rs[3], controls_rs[5], controls_rs[3]], \
-                           [1.0, 2.0, 2.0, 4.0], 9.0, 30)
+    # samples = sample_trajectory([controls_rs[0], controls_rs[3], controls_rs[5], controls_rs[3]], \
+    #                        [1.0, 2.0, 2.0, 4.0], 9.0, 30)
+    samples = sample_trajectory([controls_rs[3]], \
+                           [10.0], 1, 30)
     tview = TrajectoryView(samples, 400, 400, 40)
 
     start_graphics(display,width=800,height=800)

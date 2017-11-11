@@ -23,7 +23,7 @@ class robot_maze():
 		self.num_links = num_links 
 		self.robot_arm = robot_arm(ROBOT_CENTER_X, ROBOT_CENTER_Y, self.gen_arm_list(), None) 
 		self.obstacle_polygons = []
-		self.sol_list = []
+		self.sol_list = None
 		#Map holding vertices in free space 
 		self.valid_robot_map = {}
 
@@ -34,10 +34,14 @@ class robot_maze():
 
 		while(True):
 			init_state = int(input("What is the initial state? Choose a number from 0 to " + str(num_vertices - 1) + ":"))
-			goal_state = int(input("What is the goal state? Choose a number from 0 to " + str(num_vertices - 1) + ":"))
+			depth = int(input("How deep do you want to search? "))
 
 			key_list = list(self.valid_robot_map)
-			self.sol_list = self.ids_search(key_list[init_state], key_list[goal_state], 100)
+			self.sol_list = self.ids_search(key_list[init_state], depth)
+
+			if not self.sol_list:
+				print("Sorry, the initial state you chose does not have a state that deep. Please choose a different initial state or search a smaller depth.")
+				continue 
 
 			print(self.sol_list)
 			angle_list = self.sol_list
@@ -47,23 +51,23 @@ class robot_maze():
 
 			
 
-	def ids_search(self, init_node, goal_node, depth_limit=100):
+	def ids_search(self, init_node, depth_limit):
 		for depth in range(depth_limit):
-			sol = self.depth_limited_dfs(init_node, goal_node, 0, depth)
+			sol = self.depth_limited_dfs(init_node, 0, depth_limit)
 			if sol:
 				return sol
 
-	def depth_limited_dfs(self, init_node, goal_node, current_depth, depth_limit=100):
+	def depth_limited_dfs(self, init_node, current_depth, depth_limit):
 
 		if current_depth <= depth_limit:
-			if init_node.get_state() == goal_node.get_state():
-				return self.backchain(goal_node)
+			if current_depth == depth_limit:
+				return self.backchain(init_node)
 			else: 
 				init_node.color = "g"
-				for neighbor in sorted(self.valid_robot_map[init_node], key=lambda cost: cost[1]):
-					if neighbor[0].color == "w":
-						neighbor[0].set_parent(init_node)
-						sol = self.depth_limited_dfs(neighbor[0], goal_node, current_depth + 1)
+				for neighbor in self.valid_robot_map[init_node]:
+					if neighbor.color == "w" and self.is_valid_node(init_node, neighbor):
+						neighbor.set_parent(init_node)
+						sol = self.depth_limited_dfs(neighbor, current_depth + 1, depth_limit)
 						if sol:
 							return sol
 				init_node.color = "b"
@@ -112,7 +116,7 @@ class robot_maze():
 			for j in range(self.num_links):
 				rand_angle = uniform(0, 2*math.pi)
 				vertex.append(rand_angle)
-			rand_vertex = search_node(tuple(vertex))
+			rand_vertex = search_node(vertex)
 			if rand_vertex not in self.valid_robot_map:
 				found_vertex = True
 		return rand_vertex
@@ -130,6 +134,10 @@ class robot_maze():
 				distance += math.fabs(angle_list_2[i] - angle_list_1[i])					
 		return distance
 
+
+	#Try to implement all vertices in a given raidus
+	# def neighbors_in_radius(self):
+
 	def find_k_neighbors(self, k, vertex):
 		"""
 		Find the K nearest neighbors of a vertex
@@ -139,21 +147,12 @@ class robot_maze():
 
 		#First loop to generate distances and neighbors
 		dist_neighbor_list = []
-		neighbor_list = []
 		for node in self.valid_robot_map:
-			if node.get_state() != vertex.get_state():
-				coord_distance = self.calculate_distance(node.get_state(), vertex.get_state())
-				dist_neighbor_list.append((coord_distance, node))
-		dist_neighbor_list = sorted(dist_neighbor_list, key=lambda entry: entry[0])
-		# print("dist neighbor list: " + str(dist_neighbor_list))
-
-		#Second loop to append just the vertices in correct order
-		for i in range(len(dist_neighbor_list)):
-			if i < 15:
-				neighbor_list.append(dist_neighbor_list[i][1])
-			else:
-					break
-		return neighbor_list
+			if node.get_state() != vertex.get_state() and self.is_valid_node(vertex, node):
+					coord_distance = self.calculate_distance(node.get_state(), vertex.get_state())
+					dist_neighbor_list.append((coord_distance, node))
+			dist_neighbor_list = sorted(dist_neighbor_list, key=lambda entry: entry[0])
+		return dist_neighbor_list[:15]
 
 	def detect_collissions(self):
 		for polygon in self.obstacle_polygons:
@@ -162,6 +161,30 @@ class robot_maze():
 						# print("COLLISSION DETECTED")
 						return True
 		return False
+
+	def is_valid_node(self, curr_node, goal_node):
+		"""
+		Determine if we can make a valid transition from curr_node to goal_node
+		@param: curr_node: starting node 
+		@param: goal_node: goal node to make connection to
+		"""
+		curr_angle = curr_node.get_state()
+		goal_angle = curr_node.get_state()
+		num_steps = 10
+
+		angle_difference_list = []
+
+		for i in range(len(curr_angle)):
+			angle_difference = curr_angle[i] - goal_angle[i]
+			angle_difference_list.append(angle_difference/float(num_steps))
+
+		for j in range(num_steps):
+			for k in range(len(curr_angle)):
+				curr_angle[k] += angle_difference_list[k]
+			self.robot_arm.angle_list = curr_angle
+			if self.detect_collissions():
+				return False
+		return True
 
 	def build_roadmap(self, num_vertices):
 
@@ -179,14 +202,12 @@ class robot_maze():
 				self.valid_robot_map[current_vertex] = []
 				i += 1
 				neighbor_list = self.find_k_neighbors(15, current_vertex)
-				# print("neighbor list length: " + str(len(neighbor_list)))
 				for neighbor in neighbor_list:
-					self.robot_arm.angle_list = neighbor.get_state()
+					self.robot_arm.angle_list = neighbor[1].get_state()
 					self.robot_arm.create_polygon_list()
 					if not self.detect_collissions():
-						angle_distance = self.calculate_distance(current_vertex.get_state(), neighbor.get_state())
-						self.valid_robot_map[current_vertex].append((neighbor, angle_distance))
-						self.valid_robot_map[neighbor].append((current_vertex, angle_distance))
+						self.valid_robot_map[current_vertex].append(neighbor[1])
+			# print("i: " + str(i))
 
 	def draw(self):
 		clear()
@@ -201,8 +222,8 @@ class robot_maze():
 # test_robot_arm = robot_arm(ROBOT_CENTER_X, ROBOT_CENTER_Y, arm_list, angle_list)
 # start_graphics(test_robot_arm.draw, width=CANVAS_WIDTH, height=CANVAS_HEIGHT)
 
-test = robot_maze("obstacle2.txt", 3)
-test.PRM(30, 15)
+test = rpm("obstacle2.txt", 3)
+test.PRM(100, 15)
 
 
 
